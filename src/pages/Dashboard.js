@@ -33,8 +33,8 @@ function Dashboard() {
             </div>
             <div className="bg-[#2A2A2A] rounded-lg p-6">
               <FontAwesomeIcon icon={faUsers} className="text-primary text-3xl mb-4" />
-              <h3 className="text-xl font-semibold mb-2">社区互动</h3>
-              <p className="text-gray-400">与其他安全专家交流，分享经验和见解。</p>
+              <h3 className="text-xl font-semibold mb-2">智能问答</h3>
+              <p className="text-gray-400">提供智能ai，辅助您完成网络安全的学习。</p>
             </div>
           </div>
         </div>
