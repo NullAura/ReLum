@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faDatabase, 
@@ -21,16 +21,56 @@ import {
   faTimes,
   faChevronUp,
   faChevronDown,
-  faCircle
+  faCircle,
+  faGripLines
 } from '@fortawesome/free-solid-svg-icons';
 
 function Knowledge() {
   const [showTerminal, setShowTerminal] = useState(false);
   const [terminalInput, setTerminalInput] = useState('');
+  const [terminalHeight, setTerminalHeight] = useState(288); // 72 * 4 = 288px (h-72)
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartY = useRef(0);
+  const startHeight = useRef(0);
+  
   const [terminalHistory, setTerminalHistory] = useState([
     { type: 'output', content: '欢迎使用 ReLum 安全实验终端!' },
     { type: 'output', content: '输入 help 查看可用命令' },
   ]);
+
+  // 处理拖拽开始
+  const handleDragStart = (e) => {
+    e.preventDefault();
+    dragStartY.current = e.clientY;
+    startHeight.current = terminalHeight;
+    setIsDragging(true);
+  };
+
+  // 处理拖拽移动
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+      
+      // 计算新高度 (向上拖动增加高度)
+      const delta = dragStartY.current - e.clientY;
+      const newHeight = Math.max(100, Math.min(window.innerHeight * 0.8, startHeight.current + delta));
+      setTerminalHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   const handleTerminalSubmit = (e) => {
     e.preventDefault();
@@ -86,10 +126,22 @@ function Knowledge() {
       </div>
       
       {/* 终端界面 */}
-      <div className={`fixed bottom-0 left-0 right-0 bg-[#1E1E1E] shadow-lg transition-all duration-300 z-30 ${showTerminal ? 'h-72' : 'h-0'} overflow-hidden flex flex-col`}>
+      <div 
+        className={`fixed bottom-0 left-0 right-0 bg-[#1E1E1E] shadow-lg transition-all duration-300 z-30 ${showTerminal ? '' : 'h-0'} overflow-hidden flex flex-col`} 
+        style={{ height: showTerminal ? `${terminalHeight}px` : '0px' }}
+      >
+        {/* 拖拽手柄 */}
+        <div 
+          className="absolute top-0 left-0 right-0 h-1 bg-primary cursor-ns-resize z-10 flex justify-center items-center"
+          onMouseDown={handleDragStart}
+        >
+          <div className="w-20 h-1 bg-primary rounded-full"></div>
+        </div>
+        
         <div className="flex items-center justify-between bg-[#2D2D2D] p-2 border-b border-[#444]">
           <div className="flex items-center space-x-2">
             <div className="text-sm font-medium text-white">ReLum 安全实验终端</div>
+            <FontAwesomeIcon icon={faGripLines} className="text-gray-500 ml-2 cursor-move" onMouseDown={handleDragStart} />
           </div>
           <div className="flex items-center space-x-2">
             <button className="text-gray-400 hover:text-white">
