@@ -12,10 +12,13 @@ import {
   faLock,
   faEllipsisH
 } from '@fortawesome/free-solid-svg-icons';
+import TerminalFeature from '../components/TerminalPanel';
 
 function Dashboard() {
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <main className="max-w-7xl mx-auto px-4 py-8 relative">
+      <TerminalFeature />
+      
       <div className="grid grid-cols-1 gap-8 mb-8">
         <div className="bg-[#222222] rounded-lg p-6">
           <h1 className="text-3xl font-bold mb-4">欢迎来到 ReLum 网络安全实验场</h1>
@@ -195,4 +198,4 @@ function Dashboard() {
   );
 }
 
-export default Dashboard; 
+export default Dashboard;
