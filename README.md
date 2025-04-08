@@ -43,7 +43,7 @@ npm run build
 ## 项目结构
 
 ```
-cybersafe/
+relum/
 ├── public/             # 静态资源
 ├── src/                # 源代码
 │   ├── components/     # 可复用组件
