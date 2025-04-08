@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faDatabase, 
@@ -17,20 +17,119 @@ import {
   faHdd,
   faBrain,
   faRobot,
-  faComments
+  faComments,
+  faTimes,
+  faChevronUp,
+  faChevronDown,
+  faCircle
 } from '@fortawesome/free-solid-svg-icons';
 
 function Knowledge() {
+  const [showTerminal, setShowTerminal] = useState(false);
+  const [terminalInput, setTerminalInput] = useState('');
+  const [terminalHistory, setTerminalHistory] = useState([
+    { type: 'output', content: '欢迎使用 ReLum 安全实验终端!' },
+    { type: 'output', content: '输入 help 查看可用命令' },
+  ]);
+
+  const handleTerminalSubmit = (e) => {
+    e.preventDefault();
+    if (!terminalInput.trim()) return;
+
+    // 添加用户输入到历史记录
+    setTerminalHistory([...terminalHistory, { type: 'input', content: terminalInput }]);
+    
+    // 处理命令
+    if (terminalInput.toLowerCase() === 'help') {
+      setTerminalHistory(prev => [...prev, { 
+        type: 'output', 
+        content: '可用命令:\n- help: 显示帮助信息\n- clear: 清除终端\n- sql: 显示 SQL 注入命令示例\n- xss: 显示 XSS 攻击示例' 
+      }]);
+    } else if (terminalInput.toLowerCase() === 'clear') {
+      setTerminalHistory([
+        { type: 'output', content: '终端已清除' },
+      ]);
+    } else if (terminalInput.toLowerCase() === 'sql') {
+      setTerminalHistory(prev => [...prev, { 
+        type: 'output', 
+        content: 'SQL 注入示例:\n- 1\' OR \'1\'=\'1\n- admin\' --\n- 1\' UNION SELECT 1,2,3,4,5 --' 
+      }]);
+    } else if (terminalInput.toLowerCase() === 'xss') {
+      setTerminalHistory(prev => [...prev, { 
+        type: 'output', 
+        content: 'XSS 攻击示例:\n- <script>alert(\'XSS\')</script>\n- <img src="x" onerror="alert(\'XSS\')">\n- javascript:alert(\'XSS\')' 
+      }]);
+    } else {
+      setTerminalHistory(prev => [...prev, { 
+        type: 'output', 
+        content: `未知命令: ${terminalInput}. 输入 help 查看可用命令。` 
+      }]);
+    }
+    
+    // 清空输入框
+    setTerminalInput('');
+  };
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8 relative">
       {/* 浮动工具图标 */}
       <div className="fixed right-8 top-1/2 transform -translate-y-1/2 flex flex-col gap-4 z-10">
-        <button className="bg-primary w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-primary/90 transition-all duration-200">
+        <button 
+          className="bg-primary w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-primary/90 transition-all duration-200"
+          onClick={() => setShowTerminal(prev => !prev)}
+        >
           <FontAwesomeIcon icon={faTerminal} className="text-xl" />
         </button>
         <button className="bg-primary w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-primary/90 transition-all duration-200">
           <FontAwesomeIcon icon={faBrain} className="text-xl" />
         </button>
+      </div>
+      
+      {/* 终端界面 */}
+      <div className={`fixed bottom-0 left-0 right-0 bg-[#1E1E1E] shadow-lg transition-all duration-300 z-30 ${showTerminal ? 'h-72' : 'h-0'} overflow-hidden flex flex-col`}>
+        <div className="flex items-center justify-between bg-[#2D2D2D] p-2 border-b border-[#444]">
+          <div className="flex items-center space-x-2">
+            <div className="text-sm font-medium text-white">终端</div>
+            <div className="flex space-x-1.5 ml-3">
+              <FontAwesomeIcon icon={faCircle} className="text-red-500 text-xs" />
+              <FontAwesomeIcon icon={faCircle} className="text-yellow-500 text-xs" />
+              <FontAwesomeIcon icon={faCircle} className="text-green-500 text-xs" />
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button className="text-gray-400 hover:text-white">
+              <FontAwesomeIcon icon={showTerminal ? faChevronDown : faChevronUp} />
+            </button>
+            <button 
+              className="text-gray-400 hover:text-white"
+              onClick={() => setShowTerminal(false)}
+            >
+              <FontAwesomeIcon icon={faTimes} />
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 p-3 overflow-y-auto font-mono text-sm text-gray-300 bg-[#1E1E1E]">
+          {terminalHistory.map((entry, index) => (
+            <div key={index} className={`mb-1 ${entry.type === 'input' ? 'text-gray-300' : 'text-green-400'}`}>
+              {entry.type === 'input' ? (
+                <div><span className="text-primary">$</span> {entry.content}</div>
+              ) : (
+                <div style={{ whiteSpace: 'pre-line' }}>{entry.content}</div>
+              )}
+            </div>
+          ))}
+        </div>
+        <form onSubmit={handleTerminalSubmit} className="flex items-center p-2 bg-[#1E1E1E] border-t border-[#444]">
+          <span className="text-primary mr-2">$</span>
+          <input
+            type="text"
+            value={terminalInput}
+            onChange={(e) => setTerminalInput(e.target.value)}
+            className="flex-1 bg-transparent outline-none text-white font-mono text-sm"
+            placeholder="输入命令..."
+            autoFocus
+          />
+        </form>
       </div>
       
       <div className="bg-[#222222] rounded-lg p-6">
