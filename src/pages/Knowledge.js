@@ -14,12 +14,25 @@ import {
   faPuzzlePiece,
   faLayerGroup,
   faGlobe,
-  faHdd
+  faHdd,
+  faBrain,
+  faRobot,
+  faComments
 } from '@fortawesome/free-solid-svg-icons';
 
 function Knowledge() {
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <main className="max-w-7xl mx-auto px-4 py-8 relative">
+      {/* 浮动工具图标 */}
+      <div className="fixed right-8 top-1/2 transform -translate-y-1/2 flex flex-col gap-4 z-10">
+        <button className="bg-primary w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-primary/90 transition-all duration-200">
+          <FontAwesomeIcon icon={faTerminal} className="text-xl" />
+        </button>
+        <button className="bg-primary w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-primary/90 transition-all duration-200">
+          <FontAwesomeIcon icon={faBrain} className="text-xl" />
+        </button>
+      </div>
+      
       <div className="bg-[#222222] rounded-lg p-6">
         <h1 className="text-3xl font-bold mb-4">网络安全知识库</h1>
         <p className="text-gray-400 mb-6">这里汇集了丰富的网络安全知识和学习资源。</p>
