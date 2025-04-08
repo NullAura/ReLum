@@ -89,12 +89,7 @@ function Knowledge() {
       <div className={`fixed bottom-0 left-0 right-0 bg-[#1E1E1E] shadow-lg transition-all duration-300 z-30 ${showTerminal ? 'h-72' : 'h-0'} overflow-hidden flex flex-col`}>
         <div className="flex items-center justify-between bg-[#2D2D2D] p-2 border-b border-[#444]">
           <div className="flex items-center space-x-2">
-            <div className="text-sm font-medium text-white">终端</div>
-            <div className="flex space-x-1.5 ml-3">
-              <FontAwesomeIcon icon={faCircle} className="text-red-500 text-xs" />
-              <FontAwesomeIcon icon={faCircle} className="text-yellow-500 text-xs" />
-              <FontAwesomeIcon icon={faCircle} className="text-green-500 text-xs" />
-            </div>
+            <div className="text-sm font-medium text-white">ReLum 安全实验终端</div>
           </div>
           <div className="flex items-center space-x-2">
             <button className="text-gray-400 hover:text-white">
@@ -112,20 +107,20 @@ function Knowledge() {
           {terminalHistory.map((entry, index) => (
             <div key={index} className={`mb-1 ${entry.type === 'input' ? 'text-gray-300' : 'text-green-400'}`}>
               {entry.type === 'input' ? (
-                <div><span className="text-primary">$</span> {entry.content}</div>
+                <div className="font-mono text-sm tracking-wide"><span className="text-primary">$</span> {entry.content}</div>
               ) : (
-                <div style={{ whiteSpace: 'pre-line' }}>{entry.content}</div>
+                <div className="font-mono text-sm tracking-wide" style={{ whiteSpace: 'pre-line' }}>{entry.content}</div>
               )}
             </div>
           ))}
         </div>
         <form onSubmit={handleTerminalSubmit} className="flex items-center p-2 bg-[#1E1E1E] border-t border-[#444]">
-          <span className="text-primary mr-2">$</span>
+          <span className="text-primary mr-2 font-mono">$</span>
           <input
             type="text"
             value={terminalInput}
             onChange={(e) => setTerminalInput(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-white font-mono text-sm"
+            className="flex-1 bg-transparent outline-none text-white font-mono text-sm tracking-wide"
             placeholder="输入命令..."
             autoFocus
           />
