@@ -32,11 +32,27 @@ function Knowledge() {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef(0);
   const startHeight = useRef(0);
+  const terminalEndRef = useRef(null);
+  const inputRef = useRef(null);
   
   const [terminalHistory, setTerminalHistory] = useState([
     { type: 'output', content: '欢迎使用 ReLum 安全实验终端!' },
     { type: 'output', content: '输入 help 查看可用命令' },
   ]);
+
+  // 自动滚动到终端底部
+  useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [terminalHistory]);
+
+  // 自动聚焦输入框
+  useEffect(() => {
+    if (showTerminal && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [showTerminal]);
 
   // 处理拖拽开始
   const handleDragStart = (e) => {
@@ -110,6 +126,13 @@ function Knowledge() {
     setTerminalInput('');
   };
 
+  // 处理终端点击事件，聚焦输入
+  const handleTerminalClick = () => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8 relative">
       {/* 浮动工具图标 */}
@@ -155,7 +178,10 @@ function Knowledge() {
             </button>
           </div>
         </div>
-        <div className="flex-1 p-3 overflow-y-auto font-mono text-sm text-gray-300 bg-[#1E1E1E]">
+        <div 
+          className="flex-1 p-3 overflow-y-auto font-mono text-sm text-gray-300 bg-[#1E1E1E]"
+          onClick={handleTerminalClick}
+        >
           {terminalHistory.map((entry, index) => (
             <div key={index} className={`mb-1 ${entry.type === 'input' ? 'text-gray-300' : 'text-green-400'}`}>
               {entry.type === 'input' ? (
@@ -165,18 +191,21 @@ function Knowledge() {
               )}
             </div>
           ))}
+
+          {/* 当前输入行 */}
+          <form onSubmit={handleTerminalSubmit} className="flex items-start mb-1">
+            <span className="text-primary mr-2 font-mono">$</span>
+            <input
+              ref={inputRef}
+              type="text"
+              value={terminalInput}
+              onChange={(e) => setTerminalInput(e.target.value)}
+              className="flex-1 bg-transparent outline-none text-white font-mono text-sm tracking-wide border-none p-0 m-0"
+              autoFocus
+            />
+          </form>
+          <div ref={terminalEndRef} />
         </div>
-        <form onSubmit={handleTerminalSubmit} className="flex items-center p-2 bg-[#1E1E1E] border-t border-[#444]">
-          <span className="text-primary mr-2 font-mono">$</span>
-          <input
-            type="text"
-            value={terminalInput}
-            onChange={(e) => setTerminalInput(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-white font-mono text-sm tracking-wide"
-            placeholder="输入命令..."
-            autoFocus
-          />
-        </form>
       </div>
       
       <div className="bg-[#222222] rounded-lg p-6">
