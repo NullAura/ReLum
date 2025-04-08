@@ -22,8 +22,225 @@ import {
   faChevronUp,
   faChevronDown,
   faCircle,
-  faGripLines
+  faGripLines,
+  faPlay,
+  faStop,
+  faPlayCircle,
+  faShieldAlt,
+  faSpinner
 } from '@fortawesome/free-solid-svg-icons';
+
+// 实际WebSocket连接类（用于连接到后端Shell服务）
+class RealShellConnection {
+  constructor(onMessage, onError, onClose) {
+    this.onMessage = onMessage;
+    this.onError = onError;
+    this.onClose = onClose;
+    this.websocket = null;
+    this.connected = false;
+    this.retryCount = 0;
+    this.maxRetries = 3;
+    this.reconnectTimeout = null;
+  }
+
+  connect() {
+    try {
+      // 使用安全的WebSocket连接到后端Shell服务
+      // 注意：需要在后端设置对应的WebSocket服务器
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.hostname;
+      const port = process.env.NODE_ENV === 'development' ? '8080' : window.location.port;
+      const wsUrl = `${protocol}//${host}:${port}/api/shell`;
+      
+      this.onMessage('正在连接到Shell服务...');
+      
+      this.websocket = new WebSocket(wsUrl);
+      
+      this.websocket.onopen = () => {
+        this.connected = true;
+        this.retryCount = 0;
+        this.onMessage('连接成功! 安全隧道已建立');
+        this.onMessage('当前Shell会话为安全沙箱环境，命令执行受限。');
+        this.onMessage('输入 help 查看可用命令');
+      };
+      
+      this.websocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'output') {
+            this.onMessage(data.content);
+          } else if (data.type === 'error') {
+            this.onError(data.content);
+          }
+        } catch (e) {
+          // 如果不是JSON格式，直接显示消息
+          this.onMessage(event.data);
+        }
+      };
+      
+      this.websocket.onerror = (error) => {
+        console.error('WebSocket错误:', error);
+        this.onError('连接错误：无法连接到Shell服务');
+        this.reconnect();
+      };
+      
+      this.websocket.onclose = () => {
+        this.connected = false;
+        this.onClose('Shell连接已关闭');
+        
+        // 只有当不是手动关闭的情况下才尝试重连
+        if (this.shouldReconnect) {
+          this.reconnect();
+        }
+      };
+    } catch (error) {
+      console.error('WebSocket初始化错误:', error);
+      this.onError(`连接初始化失败: ${error.message}`);
+    }
+  }
+
+  // 尝试重新连接
+  reconnect() {
+    if (this.retryCount >= this.maxRetries) {
+      this.onError(`连接失败，已尝试${this.maxRetries}次`);
+      return;
+    }
+    
+    this.retryCount++;
+    this.onMessage(`尝试重新连接(${this.retryCount}/${this.maxRetries})...`);
+    
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+    
+    this.reconnectTimeout = setTimeout(() => {
+      this.connect();
+    }, 2000); // 2秒后重试
+  }
+
+  // 发送命令到Shell服务器
+  send(command) {
+    if (!this.connected || !this.websocket) {
+      this.onError('未连接到Shell服务');
+      return;
+    }
+    
+    try {
+      this.websocket.send(JSON.stringify({
+        type: 'command',
+        content: command
+      }));
+    } catch (error) {
+      console.error('发送命令错误:', error);
+      this.onError(`发送命令失败: ${error.message}`);
+    }
+  }
+
+  // 断开连接
+  disconnect() {
+    this.shouldReconnect = false; // 标记为手动断开，不自动重连
+    
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    
+    if (this.websocket) {
+      // 先发送退出命令
+      try {
+        this.websocket.send(JSON.stringify({
+          type: 'command',
+          content: 'exit'
+        }));
+      } catch (e) {
+        // 忽略退出时的发送错误
+      }
+      
+      // 关闭WebSocket连接
+      try {
+        this.websocket.close();
+      } catch (e) {
+        console.error('关闭WebSocket连接错误:', e);
+      }
+      
+      this.websocket = null;
+      this.connected = false;
+    }
+  }
+}
+
+// 如果后端WebSocket服务尚未实现，使用模拟服务（后端开发完成后应移除）
+function createShellConnection(onMessage, onError, onClose) {
+  // 判断后端服务是否可用
+  const checkBackendAvailable = () => {
+    return fetch('/api/health')
+      .then(response => response.ok)
+      .catch(() => false);
+  };
+  
+  return checkBackendAvailable()
+    .then(isAvailable => {
+      if (isAvailable) {
+        // 使用真实连接
+        return new RealShellConnection(onMessage, onError, onClose);
+      } else {
+        // 使用模拟连接（在生产环境中应移除）
+        onMessage('注意: 使用的是模拟Shell环境，命令并未实际执行');
+        
+        // 模拟实现
+        class MockShellConnection {
+          constructor() {
+            this.connected = false;
+            this.onMessage = onMessage;
+            this.onError = onError;
+            this.onClose = onClose;
+          }
+          
+          connect() {
+            this.connected = true;
+            this.onMessage('模拟Shell已连接 (后端服务未就绪)');
+            this.onMessage('这是一个模拟环境，可执行基本的Linux命令演示');
+          }
+          
+          send(command) {
+            if (!this.connected) {
+              this.onError('未连接到Shell服务');
+              return;
+            }
+            
+            // 基本命令模拟
+            setTimeout(() => {
+              if (command === 'ls') {
+                this.onMessage('Documents\nDownloads\nPictures\nVideos\nprojects');
+              } else if (command === 'pwd') {
+                this.onMessage('/home/user');
+              } else if (command === 'whoami') {
+                this.onMessage('user');
+              } else if (command === 'cat /etc/passwd') {
+                this.onMessage('权限不足: 无法读取敏感文件');
+              } else if (command === 'help') {
+                this.onMessage('可用命令示例:\nls - 列出文件\npwd - 显示当前目录\nwhoami - 显示当前用户\nexit - 断开连接');
+              } else if (command === 'exit') {
+                this.onMessage('断开连接...');
+                this.disconnect();
+              } else if (command.startsWith('echo ')) {
+                this.onMessage(command.substring(5));
+              } else {
+                this.onMessage(`命令 '${command}' 未找到或未实现`);
+              }
+            }, 300);
+          }
+          
+          disconnect() {
+            this.connected = false;
+            this.onClose('模拟Shell连接已关闭');
+          }
+        }
+        
+        return new MockShellConnection();
+      }
+    });
+}
 
 function Knowledge() {
   const [showTerminal, setShowTerminal] = useState(false);
@@ -34,6 +251,9 @@ function Knowledge() {
   const startHeight = useRef(0);
   const terminalEndRef = useRef(null);
   const inputRef = useRef(null);
+  const shellConnectionRef = useRef(null);
+  const [shellActive, setShellActive] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   
   const [terminalHistory, setTerminalHistory] = useState([
     { type: 'output', content: '欢迎使用 ReLum 安全实验终端!' },
@@ -53,6 +273,15 @@ function Knowledge() {
       inputRef.current.focus();
     }
   }, [showTerminal]);
+
+  // 组件卸载时断开连接
+  useEffect(() => {
+    return () => {
+      if (shellConnectionRef.current) {
+        shellConnectionRef.current.disconnect();
+      }
+    };
+  }, []);
 
   // 处理拖拽开始
   const handleDragStart = (e) => {
@@ -88,6 +317,54 @@ function Knowledge() {
     };
   }, [isDragging]);
 
+  // 连接本地Shell
+  const connectShell = () => {
+    if (shellActive || isConnecting) return;
+    
+    setIsConnecting(true);
+    setTerminalHistory(prev => [...prev, { type: 'output', content: '正在尝试连接到Shell服务...' }]);
+    
+    // 创建适当的Shell连接（真实或模拟）
+    createShellConnection(
+      // 收到消息
+      (message) => {
+        setTerminalHistory(prev => [...prev, { type: 'output', content: message }]);
+      },
+      // 错误处理
+      (error) => {
+        setTerminalHistory(prev => [...prev, { type: 'output', content: error, error: true }]);
+        setIsConnecting(false);
+      },
+      // 连接关闭
+      (message) => {
+        setTerminalHistory(prev => [...prev, { type: 'output', content: message }]);
+        setShellActive(false);
+        setIsConnecting(false);
+      }
+    ).then(connection => {
+      shellConnectionRef.current = connection;
+      connection.connect();
+      setShellActive(true);
+      setIsConnecting(false);
+    }).catch(error => {
+      setTerminalHistory(prev => [...prev, { 
+        type: 'output', 
+        content: `Shell连接初始化失败: ${error.message}`, 
+        error: true 
+      }]);
+      setIsConnecting(false);
+    });
+  };
+  
+  // 断开Shell连接
+  const disconnectShell = () => {
+    if (!shellActive || !shellConnectionRef.current) return;
+    
+    shellConnectionRef.current.disconnect();
+    shellConnectionRef.current = null;
+  };
+
+  // 处理命令提交
   const handleTerminalSubmit = (e) => {
     e.preventDefault();
     if (!terminalInput.trim()) return;
@@ -95,31 +372,48 @@ function Knowledge() {
     // 添加用户输入到历史记录
     setTerminalHistory([...terminalHistory, { type: 'input', content: terminalInput }]);
     
-    // 处理命令
-    if (terminalInput.toLowerCase() === 'help') {
-      setTerminalHistory(prev => [...prev, { 
-        type: 'output', 
-        content: '可用命令:\n- help: 显示帮助信息\n- clear: 清除终端\n- sql: 显示 SQL 注入命令示例\n- xss: 显示 XSS 攻击示例' 
-      }]);
-    } else if (terminalInput.toLowerCase() === 'clear') {
-      setTerminalHistory([
-        { type: 'output', content: '终端已清除' },
-      ]);
-    } else if (terminalInput.toLowerCase() === 'sql') {
-      setTerminalHistory(prev => [...prev, { 
-        type: 'output', 
-        content: 'SQL 注入示例:\n- 1\' OR \'1\'=\'1\n- admin\' --\n- 1\' UNION SELECT 1,2,3,4,5 --' 
-      }]);
-    } else if (terminalInput.toLowerCase() === 'xss') {
-      setTerminalHistory(prev => [...prev, { 
-        type: 'output', 
-        content: 'XSS 攻击示例:\n- <script>alert(\'XSS\')</script>\n- <img src="x" onerror="alert(\'XSS\')">\n- javascript:alert(\'XSS\')' 
-      }]);
+    // 如果Shell连接活跃，发送命令到Shell
+    if (shellActive && shellConnectionRef.current) {
+      // 特殊处理clear命令
+      if (terminalInput.trim().toLowerCase() === 'clear') {
+        // 清空历史记录，只保留一个清除成功的消息
+        setTimeout(() => {
+          setTerminalHistory([
+            { type: 'output', content: '终端已清除' },
+          ]);
+        }, 100);
+      }
+      // 无论如何都发送到shell，让服务器也能处理
+      shellConnectionRef.current.send(terminalInput);
     } else {
-      setTerminalHistory(prev => [...prev, { 
-        type: 'output', 
-        content: `未知命令: ${terminalInput}. 输入 help 查看可用命令。` 
-      }]);
+      // 否则使用本地模拟命令处理
+      if (terminalInput.toLowerCase() === 'help') {
+        setTerminalHistory(prev => [...prev, { 
+          type: 'output', 
+          content: '可用命令:\n- help: 显示帮助信息\n- clear: 清除终端\n- sql: 显示 SQL 注入命令示例\n- xss: 显示 XSS 攻击示例\n- shell: 连接到本地Shell（安全沙箱环境）' 
+        }]);
+      } else if (terminalInput.toLowerCase() === 'clear') {
+        setTerminalHistory([
+          { type: 'output', content: '终端已清除' },
+        ]);
+      } else if (terminalInput.toLowerCase() === 'sql') {
+        setTerminalHistory(prev => [...prev, { 
+          type: 'output', 
+          content: 'SQL 注入示例:\n- 1\' OR \'1\'=\'1\n- admin\' --\n- 1\' UNION SELECT 1,2,3,4,5 --' 
+        }]);
+      } else if (terminalInput.toLowerCase() === 'xss') {
+        setTerminalHistory(prev => [...prev, { 
+          type: 'output', 
+          content: 'XSS 攻击示例:\n- <script>alert(\'XSS\')</script>\n- <img src="x" onerror="alert(\'XSS\')">\n- javascript:alert(\'XSS\')' 
+        }]);
+      } else if (terminalInput.toLowerCase() === 'shell') {
+        connectShell();
+      } else {
+        setTerminalHistory(prev => [...prev, { 
+          type: 'output', 
+          content: `未知命令: ${terminalInput}. 输入 help 查看可用命令。` 
+        }]);
+      }
     }
     
     // 清空输入框
@@ -165,6 +459,37 @@ function Knowledge() {
           <div className="flex items-center space-x-2">
             <div className="text-sm font-medium text-white">ReLum 安全实验终端</div>
             <FontAwesomeIcon icon={faGripLines} className="text-gray-500 ml-2 cursor-move" onMouseDown={handleDragStart} />
+            
+            {/* Shell控制按钮 */}
+            {isConnecting ? (
+              <div className="ml-4 bg-yellow-600 text-white text-xs px-2 py-1 rounded flex items-center">
+                <FontAwesomeIcon icon={faSpinner} className="mr-1 animate-spin" />
+                正在连接...
+              </div>
+            ) : shellActive ? (
+              <button 
+                className="ml-4 bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded flex items-center"
+                onClick={disconnectShell}
+              >
+                <FontAwesomeIcon icon={faStop} className="mr-1" />
+                断开Shell
+              </button>
+            ) : (
+              <button 
+                className="ml-4 bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 rounded flex items-center"
+                onClick={connectShell}
+              >
+                <FontAwesomeIcon icon={faPlayCircle} className="mr-1" />
+                连接Shell
+              </button>
+            )}
+            
+            {shellActive && (
+              <div className="ml-2 flex items-center">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse mr-1"></div>
+                <span className="text-green-400 text-xs">已连接</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <button className="text-gray-400 hover:text-white">
@@ -178,14 +503,17 @@ function Knowledge() {
             </button>
           </div>
         </div>
+        
         <div 
           className="flex-1 p-3 overflow-y-auto font-mono text-sm text-gray-300 bg-[#1E1E1E]"
           onClick={handleTerminalClick}
         >
           {terminalHistory.map((entry, index) => (
-            <div key={index} className={`mb-1 ${entry.type === 'input' ? 'text-gray-300' : 'text-green-400'}`}>
+            <div key={index} className={`mb-1 ${entry.type === 'input' ? 'text-gray-300' : entry.error ? 'text-red-400' : 'text-green-400'}`}>
               {entry.type === 'input' ? (
-                <div className="font-mono text-sm tracking-wide"><span className="text-primary">$</span> {entry.content}</div>
+                <div className="font-mono text-sm tracking-wide">
+                  <span className="text-primary mr-1">$</span> {entry.content}
+                </div>
               ) : (
                 <div className="font-mono text-sm tracking-wide" style={{ whiteSpace: 'pre-line' }}>{entry.content}</div>
               )}

@@ -1,0 +1,27 @@
+2025-04-08 16:30:01 error: 命令执行错误 [e2bf9e7e-c716-4f36-9dfe-5beb1e7a253a]: /bin/sh: dir: command not found
+
+2025-04-08 16:34:28 error: 命令执行错误 [5b5574d4-4d6a-4e6d-b94e-9ed4084f0628]: Vim: Warning: Output is not to a terminal
+Vim: Warning: Input is not from a terminal
+
+
+2025-04-08 16:35:02 error: 命令执行错误 [5b5574d4-4d6a-4e6d-b94e-9ed4084f0628]: usage: ping [-AaDdfnoQqRrv] [-c count] [-G sweepmaxsize]
+            [-g sweepminsize] [-h sweepincrsize] [-i wait]
+            [-l preload] [-M mask | time] [-m ttl] [-p pattern]
+            [-S src_addr] [-s packetsize] [-t timeout][-W waittime]
+            [-z tos] host
+       ping [-AaDdfLnoQqRrv] [-c count] [-I iface] [-i wait]
+            [-l preload] [-M mask | time] [-m ttl] [-p pattern] [-S src_addr]
+            [-s packetsize] [-T ttl] [-t timeout] [-W waittime]
+            [-z tos] mcast-group
+Apple specific options (to be specified before mcast-group or host like all options)
+            -b boundif           # bind the socket to the interface
+            -k traffic_class     # set traffic class socket option
+            -K net_service_type  # set traffic class socket options
+            --apple-connect       # call connect(2) in the socket
+            --apple-time          # display current time
+
+2025-04-08 16:35:05 error: 命令执行错误 [5b5574d4-4d6a-4e6d-b94e-9ed4084f0628]: 命令执行失败，退出代码: null
+2025-04-08 16:35:22 error: 命令执行错误 [5b5574d4-4d6a-4e6d-b94e-9ed4084f0628]: 命令执行失败，退出代码: null
+2025-04-08 16:35:37 error: 命令执行错误 [5b5574d4-4d6a-4e6d-b94e-9ed4084f0628]: /bin/sh: /Users/killaura/Desktop/relum: is a directory
+/bin/sh: [1]: command not found
+
