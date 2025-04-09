@@ -151,77 +151,9 @@ class RealShellConnection {
   }
 }
 
-// 如果后端WebSocket服务尚未实现，使用模拟服务（后端开发完成后应移除）
 function createShellConnection(onMessage, onError, onClose) {
-  // 判断后端服务是否可用
-  const checkBackendAvailable = () => {
-    return fetch('/api/health')
-      .then(response => response.ok)
-      .catch(() => false);
-  };
-  
-  return checkBackendAvailable()
-    .then(isAvailable => {
-      if (isAvailable) {
-        // 使用真实连接
-        return new RealShellConnection(onMessage, onError, onClose);
-      } else {
-        // 使用模拟连接（在生产环境中应移除）
-        onMessage('注意: 使用的是模拟Shell环境，命令并未实际执行');
-        
-        // 模拟实现
-        class MockShellConnection {
-          constructor() {
-            this.connected = false;
-            this.onMessage = onMessage;
-            this.onError = onError;
-            this.onClose = onClose;
-          }
-          
-          connect() {
-            this.connected = true;
-            this.onMessage('模拟Shell已连接 (后端服务未就绪)');
-            this.onMessage('这是一个模拟环境，可执行基本的Linux命令演示');
-          }
-          
-          send(command) {
-            if (!this.connected) {
-              this.onError('未连接到Shell服务');
-              return;
-            }
-            
-            // 基本命令模拟
-            setTimeout(() => {
-              if (command === 'ls') {
-                this.onMessage('Documents\nDownloads\nPictures\nVideos\nprojects');
-              } else if (command === 'pwd') {
-                this.onMessage('/home/user');
-              } else if (command === 'whoami') {
-                this.onMessage('user');
-              } else if (command === 'cat /etc/passwd') {
-                this.onMessage('权限不足: 无法读取敏感文件');
-              } else if (command === 'help') {
-                this.onMessage('可用命令示例:\nls - 列出文件\npwd - 显示当前目录\nwhoami - 显示当前用户\nexit - 断开连接');
-              } else if (command === 'exit') {
-                this.onMessage('断开连接...');
-                this.disconnect();
-              } else if (command.startsWith('echo ')) {
-                this.onMessage(command.substring(5));
-              } else {
-                this.onMessage(`命令 '${command}' 未找到或未实现`);
-              }
-            }, 300);
-          }
-          
-          disconnect() {
-            this.connected = false;
-            this.onClose('模拟Shell连接已关闭');
-          }
-        }
-        
-        return new MockShellConnection();
-      }
-    });
+  // 直接返回真实连接，不再使用模拟Shell
+  return Promise.resolve(new RealShellConnection(onMessage, onError, onClose));
 }
 
 // 悬浮工具组件
@@ -323,7 +255,7 @@ export function TerminalPanel({ showTerminal, setShowTerminal }) {
     setIsConnecting(true);
     setTerminalHistory(prev => [...prev, { type: 'output', content: '正在尝试连接到Shell服务...' }]);
     
-    // 创建适当的Shell连接（真实或模拟）
+    // 创建Shell连接
     createShellConnection(
       // 收到消息
       (message) => {
@@ -382,35 +314,25 @@ export function TerminalPanel({ showTerminal, setShowTerminal }) {
           ]);
         }, 100);
       }
-      // 无论如何都发送到shell，让服务器也能处理
+      // 发送到shell
       shellConnectionRef.current.send(terminalInput);
     } else {
-      // 否则使用本地模拟命令处理
+      // 未连接时只处理少数基本命令
       if (terminalInput.toLowerCase() === 'help') {
         setTerminalHistory(prev => [...prev, { 
           type: 'output', 
-          content: '可用命令:\n- help: 显示帮助信息\n- clear: 清除终端\n- sql: 显示 SQL 注入命令示例\n- xss: 显示 XSS 攻击示例\n- shell: 连接到本地Shell（安全沙箱环境）' 
+          content: '可用命令:\n- help: 显示帮助信息\n- clear: 清除终端\n- shell: 连接到Shell服务' 
         }]);
       } else if (terminalInput.toLowerCase() === 'clear') {
         setTerminalHistory([
           { type: 'output', content: '终端已清除' },
         ]);
-      } else if (terminalInput.toLowerCase() === 'sql') {
-        setTerminalHistory(prev => [...prev, { 
-          type: 'output', 
-          content: 'SQL 注入示例:\n- 1\' OR \'1\'=\'1\n- admin\' --\n- 1\' UNION SELECT 1,2,3,4,5 --' 
-        }]);
-      } else if (terminalInput.toLowerCase() === 'xss') {
-        setTerminalHistory(prev => [...prev, { 
-          type: 'output', 
-          content: 'XSS 攻击示例:\n- <script>alert(\'XSS\')</script>\n- <img src="x" onerror="alert(\'XSS\')">\n- javascript:alert(\'XSS\')' 
-        }]);
       } else if (terminalInput.toLowerCase() === 'shell') {
         connectShell();
       } else {
         setTerminalHistory(prev => [...prev, { 
           type: 'output', 
-          content: `未知命令: ${terminalInput}. 输入 help 查看可用命令。` 
+          content: '请先连接到Shell服务。输入 shell 命令建立连接。' 
         }]);
       }
     }
