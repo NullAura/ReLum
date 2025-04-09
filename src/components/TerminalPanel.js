@@ -42,7 +42,6 @@ class RealShellConnection {
         this.connected = true;
         this.retryCount = 0;
         this.onMessage('连接成功! 安全隧道已建立');
-        this.onMessage('当前Shell会话为安全沙箱环境，命令执行受限。');
         this.onMessage('输入 help 查看可用命令');
       };
       
